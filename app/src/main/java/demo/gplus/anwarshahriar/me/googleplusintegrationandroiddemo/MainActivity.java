@@ -6,20 +6,33 @@ import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.TextView;
 
 import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.CommonStatusCodes;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.plus.People;
 import com.google.android.gms.plus.Plus;
+import com.google.android.gms.plus.model.people.PersonBuffer;
 
 
-public class MainActivity extends ActionBarActivity implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener{
+public class MainActivity extends ActionBarActivity implements
+        GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener,
+        ResultCallback<People.LoadPeopleResult>{
+
     private GoogleApiClient apiClient;
     private boolean intentInProgress;
+
+    TextView tvPerson;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        tvPerson = (TextView) findViewById(R.id.tvPerson);
 
         apiClient = new GoogleApiClient.Builder(this)
                 .addConnectionCallbacks(this)
@@ -46,7 +59,7 @@ public class MainActivity extends ActionBarActivity implements GoogleApiClient.C
 
     @Override
     public void onConnected(Bundle bundle) {
-
+        Plus.PeopleApi.loadVisible(apiClient, null).setResultCallback(this);
     }
 
     @Override
@@ -75,6 +88,24 @@ public class MainActivity extends ActionBarActivity implements GoogleApiClient.C
 
             if (!apiClient.isConnecting()) {
                 apiClient.connect();
+            }
+        }
+    }
+
+    @Override
+    public void onResult(People.LoadPeopleResult peopleData) {
+        if (peopleData.getStatus().getStatusCode() == CommonStatusCodes.SUCCESS) {
+            PersonBuffer personBuffer = peopleData.getPersonBuffer();
+
+            try {
+                int count = personBuffer.getCount();
+                String nameAndEmail = "";
+                for (int i = 0; i < count; i++) {
+                    nameAndEmail += personBuffer.get(i).getDisplayName() + "\n";
+                }
+                tvPerson.setText(nameAndEmail);
+            } finally {
+                personBuffer.close();
             }
         }
     }
